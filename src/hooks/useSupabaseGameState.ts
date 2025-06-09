@@ -30,7 +30,7 @@ export const useSupabaseGameState = () => {
         const game = games[0];
         
         // Get players for this game
-        const { data: players } = await supabase
+        const { data: playersData } = await supabase
           .from('players')
           .select('*')
           .eq('game_id', game.id)
@@ -43,9 +43,16 @@ export const useSupabaseGameState = () => {
           .eq('game_id', game.id)
           .is('confirmed', null);
 
+        // Convert database types to application types
+        const players: Player[] = (playersData || []).map(p => ({
+          ...p,
+          pending_kill_confirmation: p.pending_kill_confirmation ? 
+            p.pending_kill_confirmation as { killerId: string; timestamp: string } : null
+        }));
+
         setGameState({
           game,
-          players: players || []
+          players
         });
         setKillRequests(requests || []);
       }
@@ -65,7 +72,7 @@ export const useSupabaseGameState = () => {
         .eq('is_alive', true);
 
       if (players && players.length > 0) {
-        const player = players[0];
+        const playerData = players[0];
         
         // Mark player as logged in
         await supabase
@@ -74,9 +81,15 @@ export const useSupabaseGameState = () => {
             has_logged_in: true,
             last_action: new Date().toISOString()
           })
-          .eq('id', player.id);
+          .eq('id', playerData.id);
 
-        const updatedPlayer = { ...player, has_logged_in: true };
+        const updatedPlayer: Player = {
+          ...playerData,
+          has_logged_in: true,
+          pending_kill_confirmation: playerData.pending_kill_confirmation ? 
+            playerData.pending_kill_confirmation as { killerId: string; timestamp: string } : null
+        };
+        
         setCurrentPlayer(updatedPlayer);
         
         // Refresh game data
