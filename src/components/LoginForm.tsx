@@ -25,6 +25,13 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
       const success = await onLogin(isAdmin ? code : code.toUpperCase());
       
       if (success) {
+        // Speichere Login-Status für persistente Anmeldung
+        if (isAdmin) {
+          localStorage.setItem('admin-logged-in', 'true');
+        } else {
+          localStorage.setItem('player-code', code.toUpperCase());
+        }
+        
         toast({
           title: "Login erfolgreich",
           description: isAdmin ? "Willkommen im Admin-Bereich" : "Willkommen beim Mörder-Spiel!",
@@ -67,12 +74,14 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
-                type="text"
+                type={isAdmin ? "password" : "text"}
                 placeholder={isAdmin ? "Admin Code" : "Dein persönlicher Code"}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
                 disabled={loading}
+                autoComplete={isAdmin ? "current-password" : "username"}
+                name={isAdmin ? "password" : "username"}
               />
             </div>
             <Button 
@@ -83,12 +92,6 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
               {loading ? 'Anmelden...' : 'Anmelden'}
             </Button>
           </form>
-          
-          {isAdmin && (
-            <div className="mt-4 p-3 bg-slate-700 rounded-lg">
-              <p className="text-xs text-slate-300">Admin Code: <span className="font-mono">ADMIN</span></p>
-            </div>
-          )}
           
           {!isAdmin && (
             <div className="mt-6 p-4 bg-slate-700 rounded-lg">

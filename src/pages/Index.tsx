@@ -4,12 +4,16 @@ import { useSupabaseGameState } from '@/hooks/useSupabaseGameState';
 import LoginForm from '@/components/LoginForm';
 import PlayerDashboard from '@/components/PlayerDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
+import AdminDashboardHeader from '@/components/AdminDashboardHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'welcome' | 'player-login' | 'admin-login' | 'player-game' | 'admin-game'>('welcome');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const { toast } = useToast();
   
   const {
     gameState,
@@ -27,8 +31,35 @@ const Index = () => {
     getAlivePlayersCount,
     getPendingConfirmations,
     getAllLoggedInPlayers,
-    setCurrentPlayer
+    setCurrentPlayer,
+    refreshData
   } = useSupabaseGameState();
+
+  // Check for persisted login on component mount
+  useEffect(() => {
+    const checkPersistedLogin = async () => {
+      const adminLoggedIn = localStorage.getItem('admin-logged-in');
+      const playerCode = localStorage.getItem('player-code');
+
+      if (adminLoggedIn === 'true') {
+        setIsAdmin(true);
+        setCurrentView('admin-game');
+      } else if (playerCode) {
+        // Try to auto-login the player
+        const player = await loginPlayer(playerCode);
+        if (player) {
+          setCurrentView('player-game');
+        } else {
+          // Invalid stored code, remove it
+          localStorage.removeItem('player-code');
+        }
+      }
+    };
+
+    if (!loading) {
+      checkPersistedLogin();
+    }
+  }, [loading, loginPlayer]);
 
   const handlePlayerLogin = async (code: string): Promise<boolean> => {
     const player = await loginPlayer(code);
@@ -52,6 +83,26 @@ const Index = () => {
     setCurrentPlayer(null);
     setIsAdmin(false);
     setCurrentView('welcome');
+    localStorage.removeItem('admin-logged-in');
+    localStorage.removeItem('player-code');
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refreshData();
+      toast({
+        title: "Aktualisiert",
+        description: "Spieldaten wurden neu geladen",
+      });
+    } catch (error) {
+      toast({
+        title: "Fehler",
+        description: "Aktualisierung fehlgeschlagen",
+        variant: "destructive",
+      });
+    }
+    setRefreshing(false);
   };
 
   const handleRequestKill = (targetId: string) => {
@@ -202,25 +253,35 @@ const Index = () => {
         onRequestKill={handleRequestKill}
         onConfirmKill={handleConfirmKill}
         onLogout={handleLogout}
+        onRefresh={handleRefresh}
       />
     );
   }
 
   if (currentView === 'admin-game' && isAdmin) {
     return (
-      <AdminDashboard
-        game={gameState.game}
-        players={gameState.players}
-        aliveCount={getAlivePlayersCount()}
-        pendingConfirmations={getPendingConfirmations()}
-        loggedInPlayers={getAllLoggedInPlayers()}
-        onAddPlayer={addPlayer}
-        onUpdatePlayer={updatePlayerName}
-        onDeletePlayer={deletePlayer}
-        onStartGame={handleStartGame}
-        onResetGame={handleResetGame}
-        onLogout={handleLogout}
-      />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 p-4">
+        <div className="max-w-6xl mx-auto">
+          <AdminDashboardHeader 
+            onRefresh={handleRefresh}
+            onLogout={handleLogout}
+            refreshing={refreshing}
+          />
+          <AdminDashboard
+            game={gameState.game}
+            players={gameState.players}
+            aliveCount={getAlivePlayersCount()}
+            pendingConfirmations={getPendingConfirmations()}
+            loggedInPlayers={getAllLoggedInPlayers()}
+            onAddPlayer={addPlayer}
+            onUpdatePlayer={updatePlayerName}
+            onDeletePlayer={deletePlayer}
+            onStartGame={handleStartGame}
+            onResetGame={handleResetGame}
+            onLogout={() => {}} // Empty since handled by header
+          />
+        </div>
+      </div>
     );
   }
 

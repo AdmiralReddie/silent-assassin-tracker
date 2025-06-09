@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { RefreshCw } from 'lucide-react';
 import { Player } from '@/types/game';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +13,7 @@ interface PlayerDashboardProps {
   onRequestKill: (targetId: string) => void;
   onConfirmKill: (confirmed: boolean) => void;
   onLogout: () => void;
+  onRefresh?: () => void;
 }
 
 const PlayerDashboard = ({ 
@@ -19,9 +21,11 @@ const PlayerDashboard = ({
   target, 
   onRequestKill, 
   onConfirmKill, 
-  onLogout 
+  onLogout,
+  onRefresh
 }: PlayerDashboardProps) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,6 +70,31 @@ const PlayerDashboard = ({
     });
   };
 
+  const handleRefresh = async () => {
+    if (!onRefresh) return;
+    
+    setRefreshing(true);
+    try {
+      await onRefresh();
+      toast({
+        title: "Aktualisiert",
+        description: "Spieldaten wurden neu geladen",
+      });
+    } catch (error) {
+      toast({
+        title: "Fehler",
+        description: "Aktualisierung fehlgeschlagen",
+        variant: "destructive",
+      });
+    }
+    setRefreshing(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('player-code');
+    onLogout();
+  };
+
   if (!player.is_alive) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 p-4">
@@ -80,7 +109,7 @@ const PlayerDashboard = ({
           </CardHeader>
           <CardContent>
             <Button 
-              onClick={onLogout}
+              onClick={handleLogout}
               variant="outline"
               className="border-slate-600 text-slate-300 hover:bg-slate-700"
             >
@@ -98,14 +127,25 @@ const PlayerDashboard = ({
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-white">Mörder Spiel</h1>
-          <Button 
-            onClick={onLogout}
-            variant="outline"
-            size="sm"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-          >
-            Ausloggen
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleRefresh}
+              variant="outline"
+              size="sm"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Ausloggen
+            </Button>
+          </div>
         </div>
 
         {/* Player Info */}
