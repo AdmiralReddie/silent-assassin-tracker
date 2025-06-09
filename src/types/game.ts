@@ -1,24 +1,38 @@
 
 export interface Player {
   id: string;
+  game_id?: string;
   name: string;
   code: string;
-  isAlive: boolean;
-  targetId?: string;
-  lastAction?: Date;
-  pendingKillConfirmation?: {
+  is_alive: boolean;
+  target_id?: string;
+  last_action?: string;
+  has_logged_in: boolean;
+  pending_kill_confirmation?: {
     killerId: string;
-    timestamp: Date;
+    timestamp: string;
   };
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Game {
+  id: string;
+  status: 'setup' | 'active' | 'finished';
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface GameState {
+  game: Game | null;
   players: Player[];
-  isGameActive: boolean;
 }
 
 export interface KillRequest {
-  killerId: string;
-  targetId: string;
-  timestamp: Date;
+  id?: string;
+  game_id: string;
+  killer_id: string;
+  target_id: string;
+  confirmed?: boolean;
+  created_at?: string;
 }

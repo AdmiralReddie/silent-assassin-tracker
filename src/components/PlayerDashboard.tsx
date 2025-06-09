@@ -26,8 +26,8 @@ const PlayerDashboard = ({
 
   useEffect(() => {
     const updateTime = () => {
-      if (player.lastAction) {
-        const timeDiff = Date.now() - player.lastAction.getTime();
+      if (player.last_action) {
+        const timeDiff = Date.now() - new Date(player.last_action).getTime();
         const minutes = Math.floor(timeDiff / (1000 * 60));
         const hours = Math.floor(minutes / 60);
         
@@ -43,7 +43,7 @@ const PlayerDashboard = ({
     const interval = setInterval(updateTime, 60000); // Update every minute
     
     return () => clearInterval(interval);
-  }, [player.lastAction]);
+  }, [player.last_action]);
 
   const handleKillRequest = () => {
     if (!target) return;
@@ -66,7 +66,7 @@ const PlayerDashboard = ({
     });
   };
 
-  if (!player.isAlive) {
+  if (!player.is_alive) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 p-4">
         <Card className="w-full max-w-md bg-slate-800 border-slate-700 text-center">
@@ -124,7 +124,7 @@ const PlayerDashboard = ({
         </Card>
 
         {/* Kill Confirmation Request */}
-        {player.pendingKillConfirmation && (
+        {player.pending_kill_confirmation && (
           <Card className="bg-red-900 border-red-700 animate-pulse">
             <CardHeader>
               <CardTitle className="text-white">Eliminierung bestätigen</CardTitle>
@@ -173,15 +173,15 @@ const PlayerDashboard = ({
               <Button 
                 onClick={handleKillRequest}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold"
-                disabled={!!target.pendingKillConfirmation}
+                disabled={!!target.pending_kill_confirmation}
               >
-                {target.pendingKillConfirmation 
+                {target.pending_kill_confirmation 
                   ? 'Warte auf Bestätigung...' 
                   : 'Ich habe mein Ziel eliminiert'
                 }
               </Button>
               
-              {target.pendingKillConfirmation && (
+              {target.pending_kill_confirmation && (
                 <p className="text-xs text-slate-400 text-center">
                   {target.name} muss die Eliminierung bestätigen
                 </p>
@@ -193,7 +193,7 @@ const PlayerDashboard = ({
             <CardContent className="text-center py-8">
               <p className="text-slate-300">Kein Ziel verfügbar</p>
               <p className="text-sm text-slate-400 mt-2">
-                Das Spiel ist beendet oder es gibt einen Fehler
+                Das Spiel ist noch nicht gestartet oder beendet
               </p>
             </CardContent>
           </Card>

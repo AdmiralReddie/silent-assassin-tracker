@@ -9,16 +9,145 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      games: {
+        Row: {
+          created_at: string | null
+          id: string
+          status: Database["public"]["Enums"]["game_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["game_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["game_status"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      kill_requests: {
+        Row: {
+          confirmed: boolean | null
+          created_at: string | null
+          game_id: string | null
+          id: string
+          killer_id: string | null
+          target_id: string | null
+        }
+        Insert: {
+          confirmed?: boolean | null
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          killer_id?: string | null
+          target_id?: string | null
+        }
+        Update: {
+          confirmed?: boolean | null
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          killer_id?: string | null
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kill_requests_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kill_requests_killer_id_fkey"
+            columns: ["killer_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kill_requests_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          code: string
+          created_at: string | null
+          game_id: string | null
+          has_logged_in: boolean
+          id: string
+          is_alive: boolean
+          last_action: string | null
+          name: string
+          pending_kill_confirmation: Json | null
+          target_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          game_id?: string | null
+          has_logged_in?: boolean
+          id?: string
+          is_alive?: boolean
+          last_action?: string | null
+          name: string
+          pending_kill_confirmation?: Json | null
+          target_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          game_id?: string | null
+          has_logged_in?: boolean
+          id?: string
+          is_alive?: boolean
+          last_action?: string | null
+          name?: string
+          pending_kill_confirmation?: Json | null
+          target_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      assign_targets: {
+        Args: { game_uuid: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      game_status: "setup" | "active" | "finished"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +262,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      game_status: ["setup", "active", "finished"],
+    },
   },
 } as const

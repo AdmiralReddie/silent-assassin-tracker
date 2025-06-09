@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
-  onLogin: (code: string) => boolean;
+  onLogin: (code: string) => boolean | Promise<boolean>;
   isAdmin?: boolean;
 }
 
@@ -21,31 +21,27 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
 
     setLoading(true);
     
-    // Admin login
-    if (isAdmin && code === 'ADMIN') {
-      const success = onLogin(code);
+    try {
+      const success = await onLogin(isAdmin ? code : code.toUpperCase());
+      
       if (success) {
         toast({
-          title: "Admin Login erfolgreich",
-          description: "Willkommen im Admin-Bereich",
+          title: "Login erfolgreich",
+          description: isAdmin ? "Willkommen im Admin-Bereich" : "Willkommen beim Mörder-Spiel!",
+        });
+      } else {
+        toast({
+          title: "Login fehlgeschlagen",
+          description: isAdmin 
+            ? "Ungültiger Admin-Code" 
+            : "Ungültiger Code oder Spieler bereits eliminiert",
+          variant: "destructive",
         });
       }
-      setLoading(false);
-      return;
-    }
-
-    // Player login
-    const success = onLogin(code.toUpperCase());
-    
-    if (success) {
+    } catch (error) {
       toast({
-        title: "Login erfolgreich",
-        description: "Willkommen beim Mörder-Spiel!",
-      });
-    } else {
-      toast({
-        title: "Login fehlgeschlagen",
-        description: "Ungültiger Code oder Spieler bereits eliminiert",
+        title: "Fehler",
+        description: "Ein unerwarteter Fehler ist aufgetreten",
         variant: "destructive",
       });
     }
@@ -58,7 +54,7 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
       <Card className="w-full max-w-md bg-slate-800 border-slate-700">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-white">
-            {isAdmin ? 'Admin Login' : 'Mörder Spiel'}
+            {isAdmin ? 'Spielleitung Login' : 'Mörder Spiel'}
           </CardTitle>
           <CardDescription className="text-slate-300">
             {isAdmin 
@@ -72,7 +68,7 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
             <div>
               <Input
                 type="text"
-                placeholder={isAdmin ? "Admin Code" : "Dein Code (z.B. ALICE123)"}
+                placeholder={isAdmin ? "Admin Code" : "Dein persönlicher Code"}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className="bg-slate-700 border-slate-600 text-white placeholder-slate-400"
@@ -88,21 +84,19 @@ const LoginForm = ({ onLogin, isAdmin = false }: LoginFormProps) => {
             </Button>
           </form>
           
-          {!isAdmin && (
-            <div className="mt-6 p-4 bg-slate-700 rounded-lg">
-              <h3 className="text-sm font-semibold text-white mb-2">Demo Codes:</h3>
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                <div>ALICE123</div>
-                <div>BOB456</div>
-                <div>CLARA789</div>
-                <div>DAVID321</div>
-              </div>
-            </div>
-          )}
-          
           {isAdmin && (
             <div className="mt-4 p-3 bg-slate-700 rounded-lg">
               <p className="text-xs text-slate-300">Admin Code: <span className="font-mono">ADMIN</span></p>
+            </div>
+          )}
+          
+          {!isAdmin && (
+            <div className="mt-6 p-4 bg-slate-700 rounded-lg">
+              <h3 className="text-sm font-semibold text-white mb-2">Hinweis:</h3>
+              <p className="text-xs text-slate-300">
+                Du erhältst deinen persönlichen Code von der Spielleitung. 
+                Die Spielleitung kann Codes in der Admin-Oberfläche erstellen und verwalten.
+              </p>
             </div>
           )}
         </CardContent>

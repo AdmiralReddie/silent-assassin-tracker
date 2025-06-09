@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useGameState } from '@/hooks/useGameState';
+import { useSupabaseGameState } from '@/hooks/useSupabaseGameState';
 import LoginForm from '@/components/LoginForm';
 import PlayerDashboard from '@/components/PlayerDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
@@ -14,18 +14,24 @@ const Index = () => {
   const {
     gameState,
     currentPlayer,
+    loading,
     loginPlayer,
+    addPlayer,
+    updatePlayerName,
+    deletePlayer,
+    startGame,
     requestKill,
     confirmKill,
     resetGame,
     getCurrentTarget,
     getAlivePlayersCount,
     getPendingConfirmations,
+    getAllLoggedInPlayers,
     setCurrentPlayer
-  } = useGameState();
+  } = useSupabaseGameState();
 
-  const handlePlayerLogin = (code: string): boolean => {
-    const player = loginPlayer(code);
+  const handlePlayerLogin = async (code: string): Promise<boolean> => {
+    const player = await loginPlayer(code);
     if (player) {
       setCurrentView('player-game');
       return true;
@@ -59,6 +65,30 @@ const Index = () => {
       confirmKill(currentPlayer.id, confirmed);
     }
   };
+
+  const handleStartGame = async (): Promise<boolean> => {
+    return await startGame();
+  };
+
+  const handleResetGame = async (): Promise<boolean> => {
+    const success = await resetGame();
+    if (success) {
+      // If we're currently a player, log them out since the game was reset
+      if (currentPlayer) {
+        handleLogout();
+      }
+    }
+    return success;
+  };
+
+  // Show loading while initial data is being fetched
+  if (loading && currentView === 'welcome') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-red-900 to-slate-900">
+        <div className="text-white text-xl">Lade Spieldaten...</div>
+      </div>
+    );
+  }
 
   // Welcome Screen
   if (currentView === 'welcome') {
@@ -109,6 +139,16 @@ const Index = () => {
                 <li>• Du weißt nie, wer dich jagt</li>
               </ul>
             </div>
+
+            {/* Show current game status */}
+            {gameState.game && (
+              <div className="mt-4 p-3 bg-slate-700 rounded-lg text-center">
+                <p className="text-sm text-slate-300">
+                  Aktuelles Spiel: {gameState.players.length} Spieler, 
+                  Status: <span className="capitalize">{gameState.game.status}</span>
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -169,10 +209,16 @@ const Index = () => {
   if (currentView === 'admin-game' && isAdmin) {
     return (
       <AdminDashboard
+        game={gameState.game}
         players={gameState.players}
         aliveCount={getAlivePlayersCount()}
         pendingConfirmations={getPendingConfirmations()}
-        onResetGame={resetGame}
+        loggedInPlayers={getAllLoggedInPlayers()}
+        onAddPlayer={addPlayer}
+        onUpdatePlayer={updatePlayerName}
+        onDeletePlayer={deletePlayer}
+        onStartGame={handleStartGame}
+        onResetGame={handleResetGame}
         onLogout={handleLogout}
       />
     );
