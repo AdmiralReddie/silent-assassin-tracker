@@ -5,15 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import { Player } from '@/types/game';
-import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/hooks/useNotifications';
+import KillReportDialog from '@/components/KillReportDialog';
 
 interface PlayerDashboardProps {
   player: Player;
   target: Player | null;
-  onRequestKill: (targetId: string) => void;
+  onRequestKill: (targetId: string, killMethod: string, killDescription: string) => void;
   onConfirmKill: (confirmed: boolean) => void;
   onLogout: () => void;
   onRefresh?: () => void;
+  gameStatus?: 'setup' | 'active' | 'finished';
+  alivePlayersCount?: number;
 }
 
 const PlayerDashboard = ({ 
@@ -22,11 +25,49 @@ const PlayerDashboard = ({
   onRequestKill, 
   onConfirmKill, 
   onLogout,
-  onRefresh
+  onRefresh,
+  gameStatus,
+  alivePlayersCount = 0
 }: PlayerDashboardProps) => {
   const [timeLeft, setTimeLeft] = useState<string>('');
   const [refreshing, setRefreshing] = useState(false);
-  const { toast } = useToast();
+  const [previousGameStatus, setPreviousGameStatus] = useState<string | null>(null);
+  const [previousTargetId, setPreviousTargetId] = useState<string | null>(null);
+  const [previousAliveCount, setPreviousAliveCount] = useState<number>(0);
+  const notifications = useNotifications();
+
+  // Notification effects
+  useEffect(() => {
+    // Game started notification
+    if (previousGameStatus === 'setup' && gameStatus === 'active') {
+      notifications.notifyGameStarted();
+    }
+    setPreviousGameStatus(gameStatus || null);
+  }, [gameStatus, previousGameStatus, notifications]);
+
+  useEffect(() => {
+    // New target notification
+    if (target && previousTargetId && previousTargetId !== target.id && gameStatus === 'active') {
+      notifications.notifyNewTarget(target.name);
+    }
+    setPreviousTargetId(target?.id || null);
+  }, [target, previousTargetId, gameStatus, notifications]);
+
+  useEffect(() => {
+    // Win notification (when alive count reaches 1 and player is alive)
+    if (alivePlayersCount === 1 && player.is_alive && previousAliveCount > 1) {
+      notifications.notifyWin();
+    }
+    setPreviousAliveCount(alivePlayersCount);
+  }, [alivePlayersCount, player.is_alive, previousAliveCount, notifications]);
+
+  useEffect(() => {
+    // Kill request notification
+    if (player.pending_kill_confirmation) {
+      const { killMethod, killDescription } = player.pending_kill_confirmation;
+      notifications.notifyKillRequest(undefined, killMethod, killDescription);
+    }
+  }, [player.pending_kill_confirmation, notifications]);
 
   useEffect(() => {
     const updateTime = () => {
@@ -49,25 +90,19 @@ const PlayerDashboard = ({
     return () => clearInterval(interval);
   }, [player.last_action]);
 
-  const handleKillRequest = () => {
+  const handleKillRequest = (killMethod: string, killDescription: string) => {
     if (!target) return;
     
-    onRequestKill(target.id);
-    toast({
-      title: "Eliminierung beantragt",
-      description: `${target.name} muss die Eliminierung bestätigen`,
-    });
+    onRequestKill(target.id, killMethod, killDescription);
   };
 
   const handleConfirmKill = (confirmed: boolean) => {
     onConfirmKill(confirmed);
-    toast({
-      title: confirmed ? "Eliminierung bestätigt" : "Eliminierung abgelehnt",
-      description: confirmed 
-        ? "Du wurdest aus dem Spiel eliminiert" 
-        : "Du bleibst im Spiel",
-      variant: confirmed ? "destructive" : "default",
-    });
+    
+    if (confirmed) {
+      const { killMethod, killDescription } = player.pending_kill_confirmation || {};
+      notifications.notifyKilled(killMethod, killDescription);
+    }
   };
 
   const handleRefresh = async () => {
@@ -76,16 +111,8 @@ const PlayerDashboard = ({
     setRefreshing(true);
     try {
       await onRefresh();
-      toast({
-        title: "Aktualisiert",
-        description: "Spieldaten wurden neu geladen",
-      });
     } catch (error) {
-      toast({
-        title: "Fehler",
-        description: "Aktualisierung fehlgeschlagen",
-        variant: "destructive",
-      });
+      console.error('Refresh failed:', error);
     }
     setRefreshing(false);
   };
@@ -105,6 +132,33 @@ const PlayerDashboard = ({
             </CardTitle>
             <CardDescription className="text-slate-300">
               Danke fürs Mitspielen, {player.name}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleLogout}
+              variant="outline"
+              className="border-slate-600 text-slate-300 hover:bg-slate-700"
+            >
+              Ausloggen
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show win screen
+  if (alivePlayersCount === 1 && player.is_alive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-green-900 to-slate-900 p-4">
+        <Card className="w-full max-w-md bg-slate-800 border-slate-700 text-center">
+          <CardHeader>
+            <CardTitle className="text-3xl font-bold text-green-400">
+              🏆 Du hast gewonnen!
+            </CardTitle>
+            <CardDescription className="text-slate-300">
+              Herzlichen Glückwunsch, {player.name}! Du bist der letzte Überlebende!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -157,9 +211,16 @@ const PlayerDashboard = ({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Badge className="bg-green-600 text-white">
-              Lebendig
-            </Badge>
+            <div className="flex gap-2">
+              <Badge className="bg-green-600 text-white">
+                Lebendig
+              </Badge>
+              {alivePlayersCount > 0 && (
+                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                  {alivePlayersCount} Überlebende
+                </Badge>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -173,6 +234,18 @@ const PlayerDashboard = ({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {player.pending_kill_confirmation.killMethod && (
+                <div className="bg-red-800 p-3 rounded">
+                  <p className="text-white text-sm font-semibold">
+                    Werkzeug: {player.pending_kill_confirmation.killMethod}
+                  </p>
+                  {player.pending_kill_confirmation.killDescription && (
+                    <p className="text-red-200 text-sm mt-1">
+                      {player.pending_kill_confirmation.killDescription}
+                    </p>
+                  )}
+                </div>
+              )}
               <p className="text-white text-sm">
                 Ein anderer Spieler behauptet, dich eliminiert zu haben. 
                 Bestätige nur, wenn dies wirklich der Fall ist.
@@ -210,16 +283,12 @@ const PlayerDashboard = ({
                 <h3 className="text-xl font-semibold text-red-400">{target.name}</h3>
               </div>
               
-              <Button 
-                onClick={handleKillRequest}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold"
+              <KillReportDialog
+                targetName={target.name}
+                onReport={handleKillRequest}
                 disabled={!!target.pending_kill_confirmation}
-              >
-                {target.pending_kill_confirmation 
-                  ? 'Warte auf Bestätigung...' 
-                  : 'Ich habe mein Ziel eliminiert'
-                }
-              </Button>
+                pendingConfirmation={!!target.pending_kill_confirmation}
+              />
               
               {target.pending_kill_confirmation && (
                 <p className="text-xs text-slate-400 text-center">

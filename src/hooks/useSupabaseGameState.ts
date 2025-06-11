@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Game, GameState, KillRequest } from '@/types/game';
@@ -47,7 +46,12 @@ export const useSupabaseGameState = () => {
         const players: Player[] = (playersData || []).map(p => ({
           ...p,
           pending_kill_confirmation: p.pending_kill_confirmation ? 
-            p.pending_kill_confirmation as { killerId: string; timestamp: string } : null
+            p.pending_kill_confirmation as { 
+              killerId: string; 
+              timestamp: string; 
+              killMethod?: string; 
+              killDescription?: string; 
+            } : null
         }));
 
         setGameState({
@@ -87,7 +91,12 @@ export const useSupabaseGameState = () => {
           ...playerData,
           has_logged_in: true,
           pending_kill_confirmation: playerData.pending_kill_confirmation ? 
-            playerData.pending_kill_confirmation as { killerId: string; timestamp: string } : null
+            playerData.pending_kill_confirmation as { 
+              killerId: string; 
+              timestamp: string; 
+              killMethod?: string; 
+              killDescription?: string; 
+            } : null
         };
         
         setCurrentPlayer(updatedPlayer);
@@ -191,26 +200,30 @@ export const useSupabaseGameState = () => {
     }
   };
 
-  const requestKill = async (killerId: string, targetId: string): Promise<boolean> => {
+  const requestKill = async (killerId: string, targetId: string, killMethod: string, killDescription: string): Promise<boolean> => {
     if (!gameState.game) return false;
     
     try {
-      // Create kill request
+      // Create kill request with method and description
       await supabase
         .from('kill_requests')
         .insert({
           game_id: gameState.game.id,
           killer_id: killerId,
-          target_id: targetId
+          target_id: targetId,
+          kill_method: killMethod,
+          kill_description: killDescription
         });
 
-      // Update target with pending confirmation
+      // Update target with pending confirmation including kill details
       await supabase
         .from('players')
         .update({
           pending_kill_confirmation: {
             killerId,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            killMethod,
+            killDescription
           }
         })
         .eq('id', targetId);

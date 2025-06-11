@@ -11,6 +11,8 @@ export interface Player {
   pending_kill_confirmation?: {
     killerId: string;
     timestamp: string;
+    killMethod?: string;
+    killDescription?: string;
   };
   created_at?: string;
   updated_at?: string;
@@ -34,5 +36,7 @@ export interface KillRequest {
   killer_id: string;
   target_id: string;
   confirmed?: boolean;
+  kill_method?: string;
+  kill_description?: string;
   created_at?: string;
 }

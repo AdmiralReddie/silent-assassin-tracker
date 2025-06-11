@@ -105,9 +105,9 @@ const Index = () => {
     setRefreshing(false);
   };
 
-  const handleRequestKill = (targetId: string) => {
+  const handleRequestKill = (targetId: string, killMethod: string, killDescription: string) => {
     if (currentPlayer) {
-      requestKill(currentPlayer.id, targetId);
+      requestKill(currentPlayer.id, targetId, killMethod, killDescription);
     }
   };
 
@@ -254,6 +254,8 @@ const Index = () => {
         onConfirmKill={handleConfirmKill}
         onLogout={handleLogout}
         onRefresh={handleRefresh}
+        gameStatus={gameState.game?.status}
+        alivePlayersCount={getAlivePlayersCount()}
       />
     );
   }

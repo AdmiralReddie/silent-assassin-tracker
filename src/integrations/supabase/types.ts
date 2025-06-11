@@ -36,6 +36,8 @@ export type Database = {
           created_at: string | null
           game_id: string | null
           id: string
+          kill_description: string | null
+          kill_method: string | null
           killer_id: string | null
           target_id: string | null
         }
@@ -44,6 +46,8 @@ export type Database = {
           created_at?: string | null
           game_id?: string | null
           id?: string
+          kill_description?: string | null
+          kill_method?: string | null
           killer_id?: string | null
           target_id?: string | null
         }
@@ -52,6 +56,8 @@ export type Database = {
           created_at?: string | null
           game_id?: string | null
           id?: string
+          kill_description?: string | null
+          kill_method?: string | null
           killer_id?: string | null
           target_id?: string | null
         }
